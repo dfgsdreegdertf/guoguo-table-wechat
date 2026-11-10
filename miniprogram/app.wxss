@@ -1,0 +1,35 @@
+page {
+  background: #fff8f4;
+  color: #572a36;
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 28rpx;
+}
+view, input, textarea, button { box-sizing: border-box; }
+button { font-weight: 650; }
+button::after { border: 0; }
+button[disabled] { opacity: .55; }
+.primary, .outline {
+  margin: 0;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+}
+.primary { background: #b73b58; color: #fff; }
+.outline { background: #fffaf8; color: #9e3451; border: 1rpx solid #ebc5c9; }
+.small { font-size: 24rpx; white-space: nowrap; }
+.field {
+  width: 100%;
+  min-height: 76rpx;
+  margin: 14rpx 0;
+  padding: 16rpx 20rpx;
+  border-radius: 16rpx;
+  border: 1rpx solid #efd6d5;
+  background: #fffbf8;
+  font-size: 28rpx;
+}
+.note { height: 126rpx; }
+.eyebrow { color: #ab3c59; font-weight: 700; font-size: 21rpx; letter-spacing: 3rpx; }
+.muted { color: #815963; font-size: 25rpx; line-height: 1.6; }
+.row { display: flex; align-items: center; }
+.spaced { justify-content: space-between; gap: 16rpx; }
+.strong { font-weight: 700; }
+.accent { color: #b13f5d; }

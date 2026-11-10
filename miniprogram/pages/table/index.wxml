@@ -1,0 +1,188 @@
+<template name="orders">
+  <view wx:for="{{orders}}" wx:key="_id" class="record">
+    <view class="row spaced">
+      <text class="strong">{{item.dateTime}} 开饭</text>
+      <text class="badge">{{item.status}}</text>
+    </view>
+    <view wx:for="{{item.items}}" wx:for-item="food" wx:key="id" class="detail">
+      {{food.name}} × {{food.qty}} {{food.options}}
+    </view>
+    <view wx:if="{{item.note}}" class="detail">留言：{{item.note}}</view>
+    <button wx:if="{{manage}}" class="outline small" size="mini" data-id="{{item._id}}"
+      data-done="{{item.done ? 'no' : 'yes'}}" bindtap="status" disabled="{{busy}}">
+      {{item.done ? '恢复待办' : '标记已做好'}}
+    </button>
+  </view>
+</template>
+
+<template name="tasks">
+  <view wx:for="{{tasks}}" wx:key="_id" class="record">
+    <view class="row spaced">
+      <text class="strong">{{item.title}}</text>
+      <text class="badge">{{item.done ? '已完成' : '待完成'}}</text>
+    </view>
+    <button wx:if="{{manage}}" class="outline small" size="mini" data-id="{{item._id}}"
+      data-done="{{item.done ? 'no' : 'yes'}}" bindtap="status" disabled="{{busy}}">
+      {{item.done ? '恢复待办' : '标记完成'}}
+    </button>
+  </view>
+</template>
+
+<view wx:if="{{!role}}" class="welcome">
+  <image src="/assets/bunny.svg" class="bunny" mode="aspectFit" />
+  <text class="eyebrow">只为果果营业</text>
+  <text class="welcome-title">果果的小餐桌</text>
+  <text wx:if="{{!ready}}" class="muted">小餐桌正在准备中…</text>
+  <block wx:elif="{{setup || error}}">
+    <text class="muted">{{error}}</text>
+    <button class="outline" bindtap="refresh">再试一次</button>
+  </block>
+  <block wx:else>
+    <text class="muted">第一次来，用你的绑定码开门。</text>
+    <input class="field code" password maxlength="24" placeholder="输入微信绑定码"
+      value="{{invite}}" data-field="invite" bindinput="handleInput" />
+    <button class="primary" bindtap="join" disabled="{{busy || !invite}}">绑定这个微信</button>
+  </block>
+</view>
+
+<view wx:else class="app">
+  <view class="top">
+    <view>
+      <view class="eyebrow">♡ 只为果果营业</view>
+      <view class="title">{{tab === 'kitchen' ? '厨房工作台' : '果果的小餐桌'}}</view>
+    </view>
+    <button class="outline small" size="mini" bindtap="refresh">刷新</button>
+  </view>
+  <view wx:if="{{error}}" class="notice">{{error}}</view>
+
+  <block wx:if="{{tab === 'menu'}}">
+    <view class="section-bar">
+      <view wx:for="{{departments}}" wx:key="id"
+        class="pill {{section === item.id ? 'selected' : ''}}" data-id="{{item.id}}" bindtap="section">{{item.label}}</view>
+    </view>
+    <view class="browse">
+      <scroll-view class="sidebar" scroll-y enhanced show-scrollbar="{{false}}">
+        <view class="side {{showSweet ? 'active' : ''}}" data-id="sweet" bindtap="quick">甜口推荐</view>
+        <view class="side {{showFavorites ? 'active' : ''}}" data-id="favorites" bindtap="quick">我的收藏</view>
+        <view wx:for="{{filters}}" wx:key="id" class="side {{!showSweet && !showFavorites && group === item.id ? 'active' : ''}}"
+          data-id="{{item.id}}" bindtap="selectGroup">{{item.label}}<text wx:if="{{item.preferred}}" class="accent"> ♡</text></view>
+      </scroll-view>
+      <scroll-view class="foods" scroll-y enhanced show-scrollbar="{{false}}">
+        <view class="menu-count">{{visible.length}} 样 · 点右下角加到餐盘</view>
+        <view wx:if="{{!visible.length}}" class="empty">这里还没有餐品</view>
+        <view wx:for="{{visible}}" wx:key="id" class="dish">
+          <image wx:if="{{item.image && !photoErrors[item.id]}}" class="photo" src="{{item.image}}"
+            mode="aspectFill" lazy-load data-id="{{item.id}}" binderror="photoFailed" />
+          <view wx:else class="photo placeholder">{{item.icon}}</view>
+          <view class="dish-body">
+            <view class="dish-title">{{item.name}}</view>
+            <view class="detail">{{item.description}}</view>
+            <view class="row spaced dish-actions">
+              <text class="badge">{{item.badge || (item.sweet ? '甜口推荐' : item.groupLabel)}}</text>
+              <view class="row action-group">
+                <view class="heart {{item.saved ? 'hearted' : ''}}" data-id="{{item.id}}" bindtap="favorite">{{item.saved ? '♥' : '♡'}}</view>
+                <view class="plus" aria-role="button" aria-label="添加{{item.name}}" data-id="{{item.id}}" data-qty="1" bindtap="changeQty">＋</view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+  </block>
+
+  <scroll-view wx:elif="{{tab === 'cart'}}" class="body-scroll" scroll-y>
+    <view class="panel">
+      <view class="heading">我的餐盘 · {{portions}} 份</view>
+      <view wx:if="{{!cart.length}}" class="empty">去菜单挑点想吃的吧。</view>
+      <view wx:for="{{cart}}" wx:key="id" class="record">
+        <view class="row spaced">
+          <text class="strong">{{item.name}}</text>
+          <view class="row counter">
+            <view class="step" data-id="{{item.id}}" data-qty="-1" bindtap="changeQty">−</view>
+            <text>{{item.qty}}</text>
+            <view class="step" data-id="{{item.id}}" data-qty="1" bindtap="changeQty">＋</view>
+          </view>
+        </view>
+        <view wx:if="{{item.taste === 'food'}}" class="row option-row">
+          <picker range="{{options.coriander}}" data-id="{{item.id}}" data-key="coriander" bindchange="changeOption"><view class="option">{{item.coriander}} ⌄</view></picker>
+          <picker range="{{options.spice}}" data-id="{{item.id}}" data-key="spice" bindchange="changeOption"><view class="option">{{item.spice}} ⌄</view></picker>
+        </view>
+        <view wx:if="{{item.taste === 'drink'}}" class="row option-row">
+          <picker range="{{options.sugar}}" data-id="{{item.id}}" data-key="sugar" bindchange="changeOption"><view class="option">{{item.sugar}} ⌄</view></picker>
+          <picker range="{{options.ice}}" data-id="{{item.id}}" data-key="ice" bindchange="changeOption"><view class="option">{{item.ice}} ⌄</view></picker>
+        </view>
+      </view>
+      <view wx:if="{{cart.length}}" class="form">
+        <text class="strong">想几点吃上</text>
+        <view class="row option-row">
+          <picker mode="date" start="{{today}}" value="{{date}}" data-field="date" bindchange="handleInput"><view class="option">{{date}} ⌄</view></picker>
+          <picker mode="time" value="{{time}}" data-field="time" bindchange="handleInput"><view class="option">{{time}} ⌄</view></picker>
+        </view>
+        <textarea class="field note" value="{{note}}" data-field="note" bindinput="handleInput" maxlength="300" placeholder="给厨房留言（选填）" />
+        <button class="primary" bindtap="order" disabled="{{busy}}">提交点餐 ♡</button>
+      </view>
+    </view>
+    <view class="panel">
+      <view class="heading">最近的订单</view>
+      <view wx:if="{{!orders.length}}" class="empty">还没有订单</view>
+      <template is="orders" data="{{orders: orders, manage: false, busy: busy}}" />
+    </view>
+  </scroll-view>
+
+  <scroll-view wx:elif="{{tab === 'tasks'}}" class="body-scroll" scroll-y>
+    <view class="panel">
+      <view class="heading">果果派发任务</view>
+      <text class="muted">顺路带奶茶、取快递，都可以写在这里。</text>
+      <input class="field" value="{{taskText}}" data-field="taskText" bindinput="handleInput" maxlength="100" placeholder="想让主厨做什么？" />
+      <button class="primary" bindtap="sendTask" disabled="{{busy}}">派发任务</button>
+    </view>
+    <view class="panel">
+      <view class="heading">最近的任务</view>
+      <view wx:if="{{!tasks.length}}" class="empty">还没有任务</view>
+      <template is="tasks" data="{{tasks: tasks, manage: false, busy: busy}}" />
+    </view>
+  </scroll-view>
+
+  <scroll-view wx:elif="{{tab === 'kitchen' && role === 'owner'}}" class="body-scroll" scroll-y>
+    <view class="panel">
+      <view class="heading">厨房订单</view>
+      <view wx:if="{{!orders.length}}" class="empty">还没有订单</view>
+      <template is="orders" data="{{orders: orders, manage: true, busy: busy}}" />
+    </view>
+    <view class="panel">
+      <view class="heading">跑腿任务</view>
+      <view wx:if="{{!tasks.length}}" class="empty">还没有任务</view>
+      <template is="tasks" data="{{tasks: tasks, manage: true, busy: busy}}" />
+    </view>
+    <view class="panel">
+      <view class="heading">添加餐品</view>
+      <input class="field" value="{{newDish.name}}" data-field="newDish.name" bindinput="handleInput" maxlength="40" placeholder="菜品或饮料名称" />
+      <picker range="{{groupLabels}}" bindchange="chooseDishGroup"><view class="field">{{groupLabel || '选择分类'}} ⌄</view></picker>
+      <input class="field" value="{{newDish.description}}" data-field="newDish.description" bindinput="handleInput" maxlength="90" placeholder="一句话介绍（选填）" />
+      <input class="field" value="{{newDish.image}}" data-field="newDish.image" bindinput="handleInput" maxlength="500" placeholder="HTTPS 配图链接（选填）" />
+      <view class="row spaced switch-row">甜口推荐<switch color="#be4865" checked="{{newDish.sweet}}" bindchange="sweetDish" /></view>
+      <button class="primary" bindtap="addDish" disabled="{{busy}}">加入菜单</button>
+    </view>
+    <view class="panel">
+      <view class="heading">菜单管理</view>
+      <input class="field" value="{{manageSearch}}" bindinput="searchManagement" placeholder="搜菜名或分类" />
+      <picker range="{{manageStates}}" value="{{manageState}}" bindchange="manageState"><view class="option">{{manageStates[manageState]}} ⌄</view></picker>
+      <view wx:if="{{!managed.length}}" class="empty">没有符合条件的餐品</view>
+      <view wx:for="{{managed}}" wx:key="id" class="record row spaced">
+        <view>
+          <view class="strong">{{item.name}}</view>
+          <view class="detail">{{item.groupLabel}}</view>
+        </view>
+        <button class="outline small" size="mini" data-id="{{item.id}}" data-hidden="{{item.hidden ? 'no' : 'yes'}}"
+          bindtap="visibility" disabled="{{busy}}">{{item.hidden ? '恢复上架' : '下架'}}</button>
+      </view>
+    </view>
+  </scroll-view>
+
+  <view class="tabs">
+    <view class="tab {{tab === 'menu' ? 'selected-tab' : ''}}" data-id="menu" bindtap="tab">菜单</view>
+    <view class="tab {{tab === 'cart' ? 'selected-tab' : ''}}" data-id="cart" bindtap="tab">餐盘 <text wx:if="{{portions}}" class="counter-badge">{{portions}}</text></view>
+    <view class="tab {{tab === 'tasks' ? 'selected-tab' : ''}}" data-id="tasks" bindtap="tab">任务</view>
+    <view wx:if="{{role === 'owner'}}" class="tab {{tab === 'kitchen' ? 'selected-tab' : ''}}" data-id="kitchen" bindtap="tab">厨房</view>
+  </view>
+</view>

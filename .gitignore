@@ -1,0 +1,8 @@
+node_modules/
+/project.config.json
+/project.private.config.json
+/miniprogram/config.js
+/bootstrap.private.json
+/guoguo-bootstrap.json
+*绑定码*.txt
+.env

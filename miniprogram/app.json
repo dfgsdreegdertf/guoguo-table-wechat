@@ -1,0 +1,11 @@
+{
+  "pages": ["pages/table/index"],
+  "window": {
+    "navigationBarTitleText": "果果的小餐桌",
+    "navigationBarBackgroundColor": "#fff4ef",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#fff8f4"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}
